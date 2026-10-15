@@ -1,0 +1,11 @@
+# Fallback, falls die Subdomain nicht direkt auf /public zeigen kann:
+# alle Anfragen in den public-Ordner umleiten. Der Rest des Projekts
+# (.env, storage, vendor) ist dadurch nicht erreichbar.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>

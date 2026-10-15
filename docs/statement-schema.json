@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mycz.statement.v1",
+  "title": "MYCZ Abrechnungs-Auswertung",
+  "description": "Von Claude aus einer Jahresabrechnung (PDF) erzeugt, von der App importiert. Beträge in EUR, Dezimalpunkt, keine Tausendertrennzeichen. Daten im Format YYYY-MM-DD.",
+  "type": "object",
+  "required": ["schema", "lines"],
+  "properties": {
+    "schema": { "const": "mycz.statement.v1" },
+    "source_file_id": { "type": "string", "description": "Google-Drive-Datei-ID des ausgewerteten PDFs" },
+    "source_file_name": { "type": "string" },
+    "property_id": { "type": ["integer", "null"], "description": "ID aus status.json → properties bzw. inbox_documents" },
+    "property_name": { "type": ["string", "null"], "description": "Objektname exakt wie in status.json, falls keine ID bekannt" },
+    "issuer": { "type": ["string", "null"], "description": "Aussteller, z.B. Hausverwaltung" },
+    "statement_type": { "type": ["string", "null"], "description": "z.B. WEG-Jahresabrechnung, Betriebskostenabrechnung, Heizkostenabrechnung, Versicherung, Grundsteuer" },
+    "period_from": { "type": ["string", "null"], "format": "date" },
+    "period_to": { "type": ["string", "null"], "format": "date" },
+    "currency": { "const": "EUR" },
+    "lines": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Kostenpositionen, die auf das eigene Objekt entfallen (Anteil, nicht Gesamtliegenschaft)",
+      "items": {
+        "type": "object",
+        "required": ["label", "amount"],
+        "properties": {
+          "label": { "type": "string" },
+          "amount": { "type": "number", "description": "Bruttobetrag des eigenen Anteils" },
+          "category": { "type": ["string", "null"], "description": "Kategorie-Kürzel (slug) aus status.json → categories" },
+          "allocatable": { "type": "boolean", "description": "auf Mieter umlagefähig" }
+        }
+      }
+    },
+    "total_costs": { "type": ["number", "null"], "description": "Gesamtkosten laut Abrechnung (eigener Anteil), muss der Summe der lines entsprechen" },
+    "reserve_contribution": { "type": ["number", "null"], "description": "Beitrag zur Reparaturrücklage im Zeitraum" },
+    "reserve_balance": { "type": ["number", "null"], "description": "Stand der Rücklage (Anteil) zum Stichtag" },
+    "prepayments": { "type": ["number", "null"], "description": "Geleistete Akonto-/Vorauszahlungen" },
+    "balance": { "type": ["number", "null"], "description": "Saldo: positiv = Nachzahlung, negativ = Guthaben" },
+    "summary": { "type": ["string", "null"], "description": "2-5 Sätze auf Deutsch: Ergebnis, Auffälligkeiten, Vergleich Vorjahr falls bekannt, Hinweis auf Weiterverrechnung an Mieter" },
+    "warnings": { "type": "array", "items": { "type": "string" }, "description": "Unsicherheiten, z.B. schlecht lesbare Werte" }
+  }
+}

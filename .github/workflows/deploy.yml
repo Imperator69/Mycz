@@ -1,0 +1,73 @@
+name: Deploy World4You
+
+# Laedt die App per FTP(S) auf den World4You-Webspace und ruft danach den
+# Deploy-Hook auf (Migrationen, Cache leeren). Benoetigte Repository-Secrets:
+#   FTP_SERVER, FTP_USERNAME, FTP_PASSWORD, DEPLOY_TOKEN
+# Optionale Repository-Variablen:
+#   FTP_PROTOCOL (ftps | ftp, Standard ftps), FTP_SERVER_DIR (Standard /mycz/),
+#   APP_URL (Standard https://mycz.gl-ventures.at)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: intl, pdo_sqlite, zip, gd
+          coverage: none
+
+      - name: Tests
+        run: |
+          composer install --no-interaction --prefer-dist --no-progress
+          cp .env.example .env && php artisan key:generate
+          php artisan test
+          rm .env
+
+      - name: Produktionsabhaengigkeiten
+        run: |
+          rm -rf vendor
+          composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-progress
+
+      - name: FTP-Upload
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ${{ vars.FTP_PROTOCOL || 'ftps' }}
+          server-dir: ${{ vars.FTP_SERVER_DIR || '/mycz/' }}
+          exclude: |
+            **/.git*
+            **/.git*/**
+            .github/**
+            node_modules/**
+            tests/**
+            docs/**
+            .env
+            .env.*
+            database/*.sqlite
+            storage/logs/*.log
+            storage/framework/sessions/*
+            storage/framework/cache/data/**
+            storage/framework/views/*.php
+            storage/app/private/**
+
+      - name: Deploy-Hook (Migrationen)
+        run: |
+          curl --fail-with-body -sS -X POST \
+            -H "X-Deploy-Token: ${{ secrets.DEPLOY_TOKEN }}" \
+            -H "Accept: application/json" \
+            "${{ vars.APP_URL || 'https://mycz.gl-ventures.at' }}/system/deploy"
