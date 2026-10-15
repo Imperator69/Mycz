@@ -1,0 +1,27 @@
+{
+  "schema": "mycz.statement.v1",
+  "source_file_id": "pdf-file-123",
+  "source_file_name": "2025 Abrechnung HV.pdf",
+  "property_id": null,
+  "property_name": "Haus Melk",
+  "issuer": "Hausverwaltung Muster GmbH",
+  "statement_type": "WEG-Jahresabrechnung",
+  "period_from": "2025-01-01",
+  "period_to": "2025-12-31",
+  "currency": "EUR",
+  "lines": [
+    { "label": "Wasser/Abwasser", "amount": 412.30, "category": "wasser-kanal-muell", "allocatable": true },
+    { "label": "Müllabfuhr", "amount": 188.10, "category": "wasser-kanal-muell", "allocatable": true },
+    { "label": "Hausbetreuung", "amount": 620.00, "category": "hausbetreuung", "allocatable": true },
+    { "label": "Gebäudeversicherung", "amount": 540.25, "category": "versicherung", "allocatable": true },
+    { "label": "Verwaltungshonorar", "amount": 310.00, "category": "verwaltung", "allocatable": true },
+    { "label": "Reparaturfonds", "amount": 900.00, "category": "reparaturfonds", "allocatable": false }
+  ],
+  "total_costs": 2970.65,
+  "reserve_contribution": 900.00,
+  "reserve_balance": 15420.00,
+  "prepayments": 2800.00,
+  "balance": 170.65,
+  "summary": "Nachzahlung 170,65 EUR. Wasserkosten +12 % gegenüber Vorjahr.",
+  "warnings": []
+}
