@@ -69,12 +69,14 @@ Jeder Push auf `main` (oder manuell: Actions → „Deploy World4You“ → Run 
 
 1. Tests ausführen
 2. Produktionsabhängigkeiten installieren
-3. FTP-Upload
-4. Aufruf von `POST /system/deploy`
+3. Release-Paket `release.zip` bauen
+4. FTP-Upload von zwei Dateien: `release.zip` und `public/_deploy.php`
+5. Aufruf von `POST /_deploy.php`: entpackt das Paket am Server
+6. Aufruf von `POST /system/deploy`: Datenbank-Migrationen
+
+Ein ZIP statt tausender Einzeldateien hält den Upload kurz und robust gegen Verbindungsabbrüche. `_deploy.php` läuft ohne Laravel und nur mit dem `DEPLOY_TOKEN` aus der `.env`. Die `.env` und hochgeladene Dokumente in `storage/` sind nicht im Paket und bleiben unverändert. Am Server muss die PHP-Erweiterung `zip` aktiv sein; fehlt sie, meldet der Schritt „Am Server entpacken“ das.
 
 Der Deploy-Hook führt die Datenbank-Migrationen aus, legt die Standardkategorien an und leert die Caches. Beim ersten Mal legt er außerdem den Benutzer aus `ADMIN_*` an. Danach `ADMIN_PASSWORD` aus der `.env` am Server entfernen. Weitere Benutzer legt ihr in der App unter System → Benutzer an.
-
-Der erste FTP-Upload dauert wegen `vendor/` einige Minuten. Danach werden nur noch geänderte Dateien übertragen.
 
 ### 4. Google Drive (kostenlos)
 
