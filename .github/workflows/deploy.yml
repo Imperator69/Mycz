@@ -45,7 +45,7 @@ jobs:
       - name: Release-Paket bauen
         run: |
           zip -rq9 release.zip . \
-            -x '.git/*' '.github/*' 'node_modules/*' 'tests/*' 'docs/*' \
+            -x '.git/*' '*/.git/*' '.github/*' 'node_modules/*' 'tests/*' 'docs/*' \
                '.env' '.env.*' 'database/*.sqlite' 'release.zip' \
                'storage/logs/*.log' 'storage/framework/sessions/*' \
                'storage/framework/cache/data/*' 'storage/framework/views/*.php' \
