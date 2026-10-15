@@ -1,7 +1,8 @@
 name: Deploy World4You
 
-# Laedt die App per FTP(S) auf den World4You-Webspace und ruft danach den
-# Deploy-Hook auf (Migrationen, Cache leeren). Benoetigte Repository-Secrets:
+# Baut ein release.zip, laedt es per FTP(S) auf den World4You-Webspace,
+# entpackt es dort ueber public/_deploy.php und ruft danach den Deploy-Hook
+# auf (Migrationen, Cache leeren). Benoetigte Repository-Secrets:
 #   FTP_SERVER, FTP_USERNAME, FTP_PASSWORD, DEPLOY_TOKEN
 # Optionale Repository-Variablen:
 #   FTP_PROTOCOL (ftps | ftp, Standard ftps), FTP_SERVER_DIR (Standard /mycz/),
@@ -41,33 +42,48 @@ jobs:
           rm -rf vendor
           composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-progress
 
+      - name: Release-Paket bauen
+        run: |
+          zip -rq9 release.zip . \
+            -x '.git/*' '.github/*' 'node_modules/*' 'tests/*' 'docs/*' \
+               '.env' '.env.*' 'database/*.sqlite' 'release.zip' \
+               'storage/logs/*.log' 'storage/framework/sessions/*' \
+               'storage/framework/cache/data/*' 'storage/framework/views/*.php' \
+               'storage/app/private/*' 'public/_deploy.php'
+          ls -lh release.zip
+          unzip -l release.zip | tail -1
+
+      # Zwei Dateien statt tausender Einzeldateien: deutlich schneller und
+      # robuster gegen Verbindungsabbrüche des FTP-Servers.
       - name: FTP-Upload
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ${{ vars.FTP_PROTOCOL || 'ftps' }}
-          server-dir: ${{ vars.FTP_SERVER_DIR || '/mycz/' }}
-          exclude: |
-            **/.git*
-            **/.git*/**
-            .github/**
-            node_modules/**
-            tests/**
-            docs/**
-            .env
-            .env.*
-            database/*.sqlite
-            storage/logs/*.log
-            storage/framework/sessions/*
-            storage/framework/cache/data/**
-            storage/framework/views/*.php
-            storage/app/private/**
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PROTOCOL: ${{ vars.FTP_PROTOCOL || 'ftps' }}
+          FTP_DIR: ${{ vars.FTP_SERVER_DIR || '/mycz/' }}
+        run: |
+          TLS=""
+          if [ "$FTP_PROTOCOL" = "ftps" ]; then TLS="--ssl-reqd"; fi
+          BASE="ftp://${FTP_SERVER}${FTP_DIR%/}"
+          upload() {
+            curl -sS $TLS --ftp-create-dirs --retry 5 --retry-delay 10 --retry-all-errors \
+              --connect-timeout 30 --user "${FTP_USERNAME}:${FTP_PASSWORD}" \
+              -T "$1" "$BASE/$2"
+          }
+          upload public/_deploy.php public/_deploy.php
+          upload release.zip release.zip
+          echo "Upload fertig"
+
+      - name: Am Server entpacken
+        run: |
+          curl --fail-with-body -sS -X POST --max-time 600 --retry 2 --retry-delay 15 \
+            -H "X-Deploy-Token: ${{ secrets.DEPLOY_TOKEN }}" \
+            "${{ vars.APP_URL || 'https://mycz.gl-ventures.at' }}/_deploy.php"
 
       - name: Deploy-Hook (Migrationen)
         run: |
-          curl --fail-with-body -sS -X POST \
+          curl --fail-with-body -sS -X POST --max-time 300 \
             -H "X-Deploy-Token: ${{ secrets.DEPLOY_TOKEN }}" \
             -H "Accept: application/json" \
             "${{ vars.APP_URL || 'https://mycz.gl-ventures.at' }}/system/deploy"
