@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class DeployControllerTest extends TestCase
@@ -33,5 +34,29 @@ class DeployControllerTest extends TestCase
 
         $this->postJson('/system/deploy', [], ['X-Deploy-Token' => $token])->assertOk()->assertJsonMissing(['admin' => 'created']);
         $this->assertSame(1, User::count());
+    }
+
+    public function test_works_before_sessions_table_exists(): void
+    {
+        $token = str_repeat('x', 40);
+        config(['services.deploy.token' => $token, 'session.driver' => 'database']);
+        Schema::drop('sessions');
+
+        // 200 ohne sessions-Tabelle: die Route startet keine Session.
+        $this->postJson('/system/deploy', [], ['X-Deploy-Token' => $token])->assertOk()->assertJson(['ok' => true]);
+    }
+
+    public function test_reports_failing_step(): void
+    {
+        $token = str_repeat('x', 40);
+        config(['services.deploy.token' => $token, 'database.default' => 'kaputt', 'database.connections.kaputt' => [
+            'driver' => 'sqlite', 'database' => '/nicht/vorhanden/db.sqlite', 'prefix' => '',
+        ]]);
+
+        $this->postJson('/system/deploy', [], ['X-Deploy-Token' => $token])
+            ->assertStatus(500)
+            ->assertJson(['ok' => false, 'step' => 'database']);
+
+        config(['database.default' => 'sqlite']);
     }
 }

@@ -1,18 +1,11 @@
 <?php
 
-use App\Http\Controllers\DeployController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\GoogleDriveController;
 use App\Http\Controllers\ReportExportController;
-use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/admin');
-
-Route::post('/system/deploy', DeployController::class)
-    ->middleware('throttle:5,1')
-    ->withoutMiddleware([VerifyCsrfToken::class])
-    ->name('system.deploy');
 
 Route::middleware('auth')->group(function () {
     Route::get('/google/connect', [GoogleDriveController::class, 'connect'])->name('google.connect');
